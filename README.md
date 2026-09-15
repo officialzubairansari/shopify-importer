@@ -8,6 +8,21 @@ A fast, automated script to clone products from any Shopify store directly into 
 - **Uploads to WooCommerce**: Creates the product, creates missing categories/brands, and uploads the images automatically.
 - **Smart Resuming**: Automatically skips products that are already uploaded.
 
+### Data Mapping
+Here is exactly what gets inserted into your WooCommerce site and where it comes from:
+
+| WooCommerce Field | Source | Details |
+| :--- | :--- | :--- |
+| **Product Name** | Scraped (Shopify) | Extracted from the Shopify page title or metadata. |
+| **Regular Price** | Scraped (Shopify) | Extracted from Shopify's variant data or JSON-LD. |
+| **Sale Price** | Scraped (Shopify) | Extracted from Shopify's variant data or JSON-LD. |
+| **Images** | Scraped (Shopify) | Pulls the main image and gallery images directly from Shopify's CDN. |
+| **Brand** | Scraped (Shopify) | Automatically extracted from the Shopify JSON-LD backend data. |
+| **Description** | AI Generated | Written by Gemini/Ollama based on the product name. |
+| **Category** | Excel File | Read from Column B in your `Products.xlsx` file. |
+| **Product Type** | Hardcoded | Always set to `simple` product. |
+| **Status** | Hardcoded | Always set to `publish` (live on your store). |
+
 > **Note:** Currently supports **Simple Products** only (no variations).
 
 ---
