@@ -139,12 +139,14 @@ def import_products():
     wb = openpyxl.load_workbook(excel_file)
     ws = wb.active
     
-    # We assume headers are in row 1: URL, Category, Status
+    # We assume headers are in row 1: URL, Category, Brand, Product Description, Status
     # Iterating through rows starting from row 2
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=3), start=2):
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=5), start=2):
         url = row[0].value if len(row) > 0 else None
         category_name = row[1].value if len(row) > 1 else None
-        status = row[2].value if len(row) > 2 else None
+        excel_brand = row[2].value if len(row) > 2 else None
+        desc_strategy = row[3].value if len(row) > 3 else None
+        status = row[4].value if len(row) > 4 else None
         
         if not url:
             continue
@@ -160,8 +162,13 @@ def import_products():
             # Scrape
             product_data = scrape_product(url)
             
-            # Generate description
-            ai_description = generate_description(product_data["name"])
+            # Determine description based on column value
+            if desc_strategy == "AI":
+                final_description = generate_description(product_data["name"])
+            elif desc_strategy == "Default":
+                final_description = product_data.get("description", "")
+            else:
+                final_description = ""
             
             print("Uploading to WooCommerce...")
             
@@ -169,7 +176,7 @@ def import_products():
                 "name": product_data["name"],
                 "type": "simple",
                 "status": "publish",
-                "description": ai_description,
+                "description": final_description,
                 "regular_price": product_data["regular_price"],
                 "sale_price": product_data["sale_price"],
                 "images": [{"src": img} for img in product_data["images"]]
@@ -181,8 +188,13 @@ def import_products():
                 if category_info:
                     woo_payload["categories"] = [{"id": category_info[0]["id"]}]
                     
-            # Resolve brand: Always use the brand scraped from the product page
-            final_brand = product_data.get("brand")
+            # Resolve brand:
+            final_brand = None
+            if excel_brand == "Default":
+                final_brand = product_data.get("brand")
+            elif excel_brand:
+                final_brand = excel_brand
+                
             if final_brand:
                 brand_info = resolve_brand(final_brand)
                 if brand_info:
@@ -200,7 +212,7 @@ def import_products():
                 print(f"[OK] Success! Product created with ID: {created_product['id']}")
                 
                 # Update status in Excel and save immediately
-                ws.cell(row=row_idx, column=3, value="Uploaded")
+                ws.cell(row=row_idx, column=5, value="Uploaded")
                 wb.save(excel_file)
                 print(f"Updated status for row {row_idx} to Uploaded in {excel_file}")
             else:

@@ -17,8 +17,8 @@ Here is exactly what gets inserted into your WooCommerce site and where it comes
 | **Regular Price** | Scraped (Shopify) | Extracted from Shopify's variant data or JSON-LD. |
 | **Sale Price** | Scraped (Shopify) | Extracted from Shopify's variant data or JSON-LD. |
 | **Images** | Scraped (Shopify) | Pulls the main image and gallery images directly from Shopify's CDN. |
-| **Brand** | Scraped (Shopify) | Automatically extracted from the Shopify JSON-LD backend data. |
-| **Description** | AI Generated | Written by Gemini/Ollama based on the product name. |
+| **Brand** | Configurable | Set in `Products.xlsx`. Can be scraped, omitted, or custom text. |
+| **Description** | Configurable | Set in `Products.xlsx`. Can be AI Generated, scraped, or omitted. |
 | **Category** | Excel File | Read from Column B in your `Products.xlsx` file. |
 | **Product Type** | Hardcoded | Always set to `simple` product. |
 | **Status** | Hardcoded | Always set to `publish` (live on your store). |
@@ -49,12 +49,12 @@ Here is exactly what gets inserted into your WooCommerce site and where it comes
    ```
 
 ## 2. Prepare your Excel File
-Create a `Products.xlsx` file in the same folder with **exactly 3 columns** in the first row:
+Create a `Products.xlsx` file in the same folder with **exactly 5 columns** in the first row:
 - **Column A:** `URL` (The Shopify product link)
 - **Column B:** `Category` (The WooCommerce category you want it in)
-- **Column C:** `Status` (Leave this blank. The script will write "Uploaded" here when done).
-
-*(The brand is automatically detected and created for you!)*
+- **Column C:** `Brand` (`Default` to scrape it, leave blank for none, or type a custom brand name).
+- **Column D:** `Product Description` (`AI` to write an AI description, `Default` to use the original scraped text, leave blank for none).
+- **Column E:** `Status` (Leave this blank. The script will write "Uploaded" here when done).
 
 ## 3. Run the Importer
 Run the script from your terminal:

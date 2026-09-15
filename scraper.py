@@ -230,6 +230,35 @@ def scrape_product(url):
                 continue
 
     # =========================================================
+    # PRODUCT DESCRIPTION
+    # =========================================================
+
+    scraped_description = ""
+
+    og_description = soup.find(
+        "meta",
+        property="og:description"
+    )
+
+    if og_description and og_description.get("content"):
+        scraped_description = clean_text(og_description["content"])
+
+    if not scraped_description:
+        # Fallback to json-ld
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                data = json.loads(script.string or script.get_text())
+                items = data if isinstance(data, list) else [data]
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    if item.get("@type") == "Product" and item.get("description"):
+                        scraped_description = clean_text(item.get("description"))
+                        break
+            except Exception:
+                continue
+
+    # =========================================================
     # PRODUCT IMAGES
     # =========================================================
 
@@ -338,6 +367,7 @@ def scrape_product(url):
 
     return {
         "name": product_name,
+        "description": scraped_description,
         "regular_price": regular_price,
         "sale_price": sale_price,
         "images": images,
@@ -353,8 +383,8 @@ if __name__ == "__main__":
 
     test_url = (
         "https://bagallery.com/"
-        "collections/lattafa/products/"
-        "lattafa-opulent-dubai-edp-100ml"
+        "collections/rtw/products/"
+        "rtw-black-suede-push-lock-messenger-bag"
     )
 
     try:
@@ -389,6 +419,9 @@ if __name__ == "__main__":
 
         print("\nBrand:")
         print(product.get("brand"))
+
+        print("\nDescription:")
+        print(product.get("description"))
 
         print(
             "\n" + "=" * 60
