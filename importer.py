@@ -1,5 +1,7 @@
 import os
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import json
 import openpyxl
 from scraper import scrape_product
@@ -8,12 +10,25 @@ from config import (
     WOOCOMMERCE_KEY,
     WOOCOMMERCE_SECRET,
     OLLAMA_URL,
-    OLLAMA_MODEL
+    OLLAMA_MODEL,
+    AI_PROVIDER,
+    GEMINI_API_KEY
 )
 
+# Setup requests session with retries for robust API calls
+session = requests.Session()
+retries = Retry(
+    total=3, 
+    backoff_factor=2, 
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=frozenset(['GET', 'POST'])
+)
+session.mount('http://', HTTPAdapter(max_retries=retries))
+session.mount('https://', HTTPAdapter(max_retries=retries))
+
 def generate_description(product_name):
-    """Generate product description using Ollama."""
-    print(f"Generating description for: {product_name}")
+    """Generate product description using Ollama or Gemini."""
+    print(f"Generating description for: {product_name} using {AI_PROVIDER.upper()}")
     
     prompt = f"""
 You are an expert ecommerce product copywriter.
@@ -35,17 +50,30 @@ Requirements:
 - Return ONLY the HTML description, nothing else
 """
     
-    response = requests.post(
-        f"{OLLAMA_URL}/api/generate",
-        json={
-            "model": OLLAMA_MODEL,
-            "prompt": prompt,
-            "stream": False
-        },
-        timeout=120
-    )
-    response.raise_for_status()
-    return response.json()["response"]
+    if AI_PROVIDER == "gemini":
+        if not GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY is missing in .env")
+        # Using gemini-flash-lite-latest as it is the fastest, most lightweight model available
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={GEMINI_API_KEY}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        response = session.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=45)
+        response.raise_for_status()
+        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+    else:
+        # Default to Ollama
+        response = session.post(
+            f"{OLLAMA_URL}/api/generate",
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=45
+        )
+        response.raise_for_status()
+        return response.json()["response"]
 
 def resolve_category(category_name):
     """Find or create a WooCommerce category."""

@@ -1,13 +1,13 @@
 # Shopify to WooCommerce Importer
 
-This Python script automates the process of importing products from a Shopify store into a target WooCommerce site. It reads product URLs from an Excel file, scrapes the product details, generates a high-quality AI product description using Ollama, and publishes the product to WooCommerce.
+This Python script automates the process of importing products from a Shopify store into a target WooCommerce site. It reads product URLs from an Excel file, scrapes the product details, generates a high-quality AI product description using Ollama or Google Gemini API, and publishes the product to WooCommerce.
 
 > **Note**: Currently, this script only supports cloning **Simple Products**. Variable products are not supported yet.
 
 ## Features
 
 - **Automated Scraping**: Fetches product details (name, prices, images) directly from a provided Shopify product URL.
-- **AI Description Generation**: Uses a local Ollama instance to generate engaging, professional product descriptions tailored for e-commerce.
+- **AI Description Generation**: Uses either a local Ollama instance or the Google Gemini API to generate engaging, professional product descriptions tailored for e-commerce. You can switch between them in the `.env` file.
 - **Category & Brand Management**: Automatically creates new categories and brands in WooCommerce if they don't exist.
 - **Batch Processing**: Reads products from an Excel file (`Products.xlsx`) and keeps track of upload status, skipping already uploaded items so you can safely pause and resume.
 
@@ -17,7 +17,7 @@ Before running the script, ensure you have the following:
 
 - **Python 3.7+**
 - **WooCommerce Store**: With REST API enabled (Consumer Key and Consumer Secret).
-- **Ollama**: Running locally or accessible via network, with your desired model installed (e.g., `qwen3:4b`).
+- **Ollama or Gemini API**: Either Ollama running locally/via network, or a Google Gemini API Key.
 
 ## Installation
 
@@ -46,6 +46,10 @@ WOOCOMMERCE_SECRET=your_consumer_secret_here
 
 OLLAMA_URL=http://localhost:11434  # Or your Ollama server IP
 OLLAMA_MODEL=qwen3:4b              # Or any other model you have pulled
+
+# AI Provider Settings
+AI_PROVIDER=ollama                 # Options: ollama, gemini
+GEMINI_API_KEY=your_gemini_key     # Required if AI_PROVIDER is set to gemini
 ```
 
 ## How to Use
@@ -69,4 +73,4 @@ OLLAMA_MODEL=qwen3:4b              # Or any other model you have pulled
 ## Known Limitations
 
 - **Simple Products Only**: The script currently does not scrape or upload variations (sizes, colors, etc.). It uploads everything as a "simple" product type.
-- **Ollama Generation Time**: Depending on your hardware and the Ollama model used, generating descriptions may take some time. The script has a built-in 120-second timeout for AI requests.
+- **AI Generation Time**: Depending on your hardware and the Ollama model used (or Gemini API rate limits), generating descriptions may take some time. The script has a built-in 120-second timeout for AI requests.
