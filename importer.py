@@ -139,13 +139,12 @@ def import_products():
     wb = openpyxl.load_workbook(excel_file)
     ws = wb.active
     
-    # We assume headers are in row 1: URL, Category, Brand, Status
+    # We assume headers are in row 1: URL, Category, Status
     # Iterating through rows starting from row 2
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=4), start=2):
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=3), start=2):
         url = row[0].value if len(row) > 0 else None
         category_name = row[1].value if len(row) > 1 else None
-        brand = row[2].value if len(row) > 2 else None
-        status = row[3].value if len(row) > 3 else None
+        status = row[2].value if len(row) > 2 else None
         
         if not url:
             continue
@@ -201,7 +200,7 @@ def import_products():
                 print(f"[OK] Success! Product created with ID: {created_product['id']}")
                 
                 # Update status in Excel and save immediately
-                ws.cell(row=row_idx, column=4, value="Uploaded")
+                ws.cell(row=row_idx, column=3, value="Uploaded")
                 wb.save(excel_file)
                 print(f"Updated status for row {row_idx} to Uploaded in {excel_file}")
             else:
