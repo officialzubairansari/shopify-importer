@@ -141,11 +141,11 @@ def import_products():
     
     # We assume headers are in row 1: URL, Category, Brand, Status
     # Iterating through rows starting from row 2
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2), start=2):
-        url = row[0].value
-        category_name = row[1].value
-        brand = row[2].value
-        status = row[3].value
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=4), start=2):
+        url = row[0].value if len(row) > 0 else None
+        category_name = row[1].value if len(row) > 1 else None
+        brand = row[2].value if len(row) > 2 else None
+        status = row[3].value if len(row) > 3 else None
         
         if not url:
             continue
@@ -182,9 +182,10 @@ def import_products():
                 if category_info:
                     woo_payload["categories"] = [{"id": category_info[0]["id"]}]
                     
-            # Resolve brand
-            if brand:
-                brand_info = resolve_brand(brand)
+            # Resolve brand: Always use the brand scraped from the product page
+            final_brand = product_data.get("brand")
+            if final_brand:
+                brand_info = resolve_brand(final_brand)
                 if brand_info:
                     woo_payload["brands"] = [{"id": brand_info[0]["id"]}]
                 
@@ -200,7 +201,7 @@ def import_products():
                 print(f"[OK] Success! Product created with ID: {created_product['id']}")
                 
                 # Update status in Excel and save immediately
-                row[3].value = "Uploaded"
+                ws.cell(row=row_idx, column=4, value="Uploaded")
                 wb.save(excel_file)
                 print(f"Updated status for row {row_idx} to Uploaded in {excel_file}")
             else:

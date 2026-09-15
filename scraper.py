@@ -160,10 +160,12 @@ def scrape_product(url):
             break
 
     # =========================================================
-    # FALLBACK PRICE FROM JSON-LD
+    # BRAND AND FALLBACK PRICE FROM JSON-LD
     # =========================================================
 
-    if not sale_price:
+    scraped_brand = ""
+
+    if True:
 
         for script in soup.find_all(
             "script",
@@ -211,23 +213,20 @@ def scrape_product(url):
                             else None
                         )
 
-                    if isinstance(
-                        offers,
-                        dict
-                    ):
-
-                        price = offers.get(
-                            "price"
-                        )
-
-                        if price:
-
-                            sale_price = str(
-                                price
-                            )
+                    if isinstance(offers, dict):
+                        price = offers.get("price")
+                        if price and not sale_price:
+                            sale_price = str(price)
+                            
+                    brand_info = item.get("brand")
+                    if isinstance(brand_info, dict):
+                        name = brand_info.get("name")
+                        if name:
+                            scraped_brand = clean_text(name)
+                    elif isinstance(brand_info, str):
+                        scraped_brand = clean_text(brand_info)
 
             except Exception:
-
                 continue
 
     # =========================================================
@@ -342,6 +341,7 @@ def scrape_product(url):
         "regular_price": regular_price,
         "sale_price": sale_price,
         "images": images,
+        "brand": scraped_brand,
     }
 
 
@@ -386,6 +386,9 @@ if __name__ == "__main__":
             "\nTotal Images:",
             len(product["images"])
         )
+
+        print("\nBrand:")
+        print(product.get("brand"))
 
         print(
             "\n" + "=" * 60
