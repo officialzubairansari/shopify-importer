@@ -125,6 +125,31 @@ def resolve_brand(brand_name):
     resp.raise_for_status()
     return [{"id": resp.json()["id"]}]
 
+def resolve_tag(tag_name):
+    """Find or create a WooCommerce tag."""
+    if not tag_name:
+        return []
+        
+    url = f"{WOOCOMMERCE_URL}/wp-json/wc/v3/products/tags"
+    auth = (WOOCOMMERCE_KEY, WOOCOMMERCE_SECRET)
+    
+    # Search
+    resp = requests.get(url, auth=auth, params={"search": tag_name})
+    resp.raise_for_status()
+    tags = resp.json()
+    
+    if tags:
+        for t in tags:
+            if t["name"].lower() == tag_name.lower():
+                return [{"id": t["id"]}]
+        return [{"id": tags[0]["id"]}]
+        
+    # Create new
+    print(f"Creating new tag: {tag_name}")
+    resp = requests.post(url, auth=auth, json={"name": tag_name})
+    resp.raise_for_status()
+    return [{"id": resp.json()["id"]}]
+
 def import_products():
     excel_file = "Products.xlsx"
     if not os.path.exists(excel_file):
@@ -139,14 +164,15 @@ def import_products():
     wb = openpyxl.load_workbook(excel_file)
     ws = wb.active
     
-    # We assume headers are in row 1: URL, Category, Brand, Product Description, Status
+    # We assume headers are in row 1: URL, Category, Tag, Brand, Product Description, Status
     # Iterating through rows starting from row 2
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=5), start=2):
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=6), start=2):
         url = row[0].value if len(row) > 0 else None
         category_name = row[1].value if len(row) > 1 else None
-        excel_brand = row[2].value if len(row) > 2 else None
-        desc_strategy = row[3].value if len(row) > 3 else None
-        status = row[4].value if len(row) > 4 else None
+        tag_name = row[2].value if len(row) > 2 else None
+        excel_brand = row[3].value if len(row) > 3 else None
+        desc_strategy = row[4].value if len(row) > 4 else None
+        status = row[5].value if len(row) > 5 else None
         
         if not url:
             continue
@@ -187,6 +213,12 @@ def import_products():
                 category_info = resolve_category(category_name)
                 if category_info:
                     woo_payload["categories"] = [{"id": category_info[0]["id"]}]
+
+            # Resolve tag
+            if tag_name:
+                tag_info = resolve_tag(tag_name)
+                if tag_info:
+                    woo_payload["tags"] = [{"id": tag_info[0]["id"]}]
                     
             # Resolve brand:
             final_brand = None
@@ -212,7 +244,7 @@ def import_products():
                 print(f"[OK] Success! Product created with ID: {created_product['id']}")
                 
                 # Update status in Excel and save immediately
-                ws.cell(row=row_idx, column=5, value="Uploaded")
+                ws.cell(row=row_idx, column=6, value="Uploaded")
                 wb.save(excel_file)
                 print(f"Updated status for row {row_idx} to Uploaded in {excel_file}")
             else:
