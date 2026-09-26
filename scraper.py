@@ -71,6 +71,16 @@ def scrape_product(url):
                 
                 regular_price = ""
                 sale_price = ""
+                
+                scraped_options = []
+                for opt in data.get("options", []):
+                    if opt.get("name") != "Title":
+                        scraped_options.append({
+                            "name": opt.get("name"),
+                            "values": opt.get("values", [])
+                        })
+                
+                parsed_variants = []
                 variants = data.get("variants", [])
                 if variants:
                     v = variants[0]
@@ -83,6 +93,18 @@ def scrape_product(url):
                         sale_price = str(price)
                         if not regular_price:
                             regular_price = sale_price
+                            
+                    for v in variants:
+                        v_price = v.get("price")
+                        v_compare = v.get("compare_at_price")
+                        parsed_variants.append({
+                            "title": v.get("title"),
+                            "option1": v.get("option1"),
+                            "option2": v.get("option2"),
+                            "option3": v.get("option3"),
+                            "regular_price": str(v_compare) if v_compare else (str(v_price) if v_price else ""),
+                            "sale_price": str(v_price) if v_price else ""
+                        })
                         
                 images = []
                 for img_obj in data.get("images", []):
@@ -99,6 +121,8 @@ def scrape_product(url):
                     "sale_price": sale_price,
                     "images": images,
                     "brand": scraped_brand,
+                    "options": scraped_options,
+                    "variants": parsed_variants
                 }
     except Exception as e:
         print(f"JSON endpoint fetch failed: {e}. Falling back to HTML scraping.")
@@ -249,6 +273,8 @@ def scrape_product(url):
         "sale_price": sale_price,
         "images": images,
         "brand": scraped_brand,
+        "options": [],
+        "variants": []
     }
 
 if __name__ == "__main__":

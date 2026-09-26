@@ -20,10 +20,10 @@ Here is exactly what gets inserted into your WooCommerce site and where it comes
 | **Brand** | Configurable | Set in `Products.xlsx`. Can be scraped, omitted, or custom text. |
 | **Description** | Configurable | Set in `Products.xlsx`. Can be AI Generated, scraped, or omitted. |
 | **Category** | Excel File | Read from Column B in your `Products.xlsx` file. |
-| **Product Type** | Hardcoded | Always set to `simple` product. |
+| **Product Type** | Dynamic | Automatically set to `variable` if variants are detected, otherwise `simple`. |
+| **Attributes** | Scraped (Shopify) | Automatically creates or reuses existing WooCommerce global attributes. |
+| **Variations** | Scraped (Shopify) | Automatically creates variations with their respective dynamic prices. |
 | **Status** | Hardcoded | Always set to `publish` (live on your store). |
-
-> **Note:** Currently supports **Simple Products** only (no variations).
 
 ---
 

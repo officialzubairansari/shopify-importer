@@ -150,6 +150,33 @@ def resolve_tag(tag_name):
     resp.raise_for_status()
     return [{"id": resp.json()["id"]}]
 
+def resolve_attribute(attribute_name):
+    """Find or create a WooCommerce attribute."""
+    if not attribute_name:
+        return None
+        
+    url = f"{WOOCOMMERCE_URL}/wp-json/wc/v3/products/attributes"
+    auth = (WOOCOMMERCE_KEY, WOOCOMMERCE_SECRET)
+    
+    # Get all attributes
+    resp = requests.get(url, auth=auth)
+    resp.raise_for_status()
+    attributes = resp.json()
+    
+    if attributes:
+        for attr in attributes:
+            if attr["name"].lower() == attribute_name.lower():
+                return attr["id"]
+                
+    # Create new
+    print(f"Creating new attribute: {attribute_name}")
+    resp = requests.post(url, auth=auth, json={"name": attribute_name})
+    if resp.status_code in (200, 201):
+        return resp.json()["id"]
+    else:
+        print(f"Failed to create attribute {attribute_name}: {resp.text}")
+        return None
+
 def import_products():
     excel_file = "Products.xlsx"
     if not os.path.exists(excel_file):
@@ -200,13 +227,44 @@ def import_products():
             
             woo_payload = {
                 "name": product_data["name"],
-                "type": "simple",
                 "status": "publish",
                 "description": final_description,
-                "regular_price": product_data["regular_price"],
-                "sale_price": product_data["sale_price"],
                 "images": [{"src": img} for img in product_data["images"]]
             }
+            
+            scraped_options = product_data.get("options", [])
+            scraped_variants = product_data.get("variants", [])
+            
+            has_variants = len(scraped_options) > 0 and len(scraped_variants) > 0
+            
+            if has_variants:
+                woo_payload["type"] = "variable"
+                # Resolve attributes and add to payload
+                woo_attributes = []
+                for i, opt in enumerate(scraped_options):
+                    attr_id = resolve_attribute(opt["name"])
+                    if attr_id:
+                        woo_attributes.append({
+                            "id": attr_id,
+                            "name": opt["name"],
+                            "position": i,
+                            "visible": True,
+                            "variation": True,
+                            "options": opt["values"]
+                        })
+                    else:
+                        woo_attributes.append({
+                            "name": opt["name"],
+                            "position": i,
+                            "visible": True,
+                            "variation": True,
+                            "options": opt["values"]
+                        })
+                woo_payload["attributes"] = woo_attributes
+            else:
+                woo_payload["type"] = "simple"
+                woo_payload["regular_price"] = product_data["regular_price"]
+                woo_payload["sale_price"] = product_data["sale_price"]
             
             # Resolve category
             if category_name:
@@ -241,7 +299,44 @@ def import_products():
             
             if resp.status_code in (200, 201):
                 created_product = resp.json()
-                print(f"[OK] Success! Product created with ID: {created_product['id']}")
+                product_id = created_product['id']
+                print(f"[OK] Success! Product created with ID: {product_id}")
+                
+                # Add variations if applicable
+                if has_variants:
+                    print(f"Creating variations for product {product_id}...")
+                    for v in scraped_variants:
+                        var_attributes = []
+                        if v.get("option1") and len(scraped_options) > 0:
+                            var_attributes.append({
+                                "name": scraped_options[0]["name"],
+                                "option": v["option1"]
+                            })
+                        if v.get("option2") and len(scraped_options) > 1:
+                            var_attributes.append({
+                                "name": scraped_options[1]["name"],
+                                "option": v["option2"]
+                            })
+                        if v.get("option3") and len(scraped_options) > 2:
+                            var_attributes.append({
+                                "name": scraped_options[2]["name"],
+                                "option": v["option3"]
+                            })
+                            
+                        var_payload = {
+                            "regular_price": v["regular_price"],
+                            "sale_price": v["sale_price"],
+                            "attributes": var_attributes
+                        }
+                        
+                        var_url = f"{WOOCOMMERCE_URL}/wp-json/wc/v3/products/{product_id}/variations"
+                        var_resp = requests.post(
+                            var_url,
+                            auth=(WOOCOMMERCE_KEY, WOOCOMMERCE_SECRET),
+                            json=var_payload
+                        )
+                        if var_resp.status_code not in (200, 201):
+                            print(f"[ERROR] Failed to create variation: {var_resp.text}")
                 
                 # Update status in Excel and save immediately
                 ws.cell(row=row_idx, column=6, value="Uploaded")
